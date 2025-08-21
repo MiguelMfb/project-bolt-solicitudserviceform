@@ -91,8 +91,3 @@ export interface ServiceStats {
   cancelacionSolicitada: number;
   noShow: number;
 }
-
-export interface ApprovalStats {
-  autorizado: number;
-  noAutorizado: number;
-}
