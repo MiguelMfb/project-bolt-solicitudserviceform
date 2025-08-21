@@ -106,7 +106,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
   // Status options for filter
   const statusOptions = [
     { value: 'PENDIENTE', label: 'Pendiente', color: 'yellow' },
-    { value: 'PROGRAMADO', label: 'Programado', color: 'green' },
     { value: 'FINALIZADO', label: 'Finalizado', color: 'blue' },
     { value: 'CANCELADO', label: 'Cancelado', color: 'red' },
     { value: 'CANCELACION_SOLICITADA', label: 'Cancelación Solicitada', color: 'orange' },
