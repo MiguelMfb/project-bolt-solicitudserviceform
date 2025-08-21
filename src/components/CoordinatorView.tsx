@@ -1,11 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, Search, FileText, Users, Truck, Filter, X, Download, Eye, CheckCircle, XCircle, AlertTriangle, Clock, UserX, User, Car, MapPin, MoreVertical, Edit, Ban, LogOut, ChevronDown, Plus } from 'lucide-react';
-import { Service, Driver, ServiceStats, ApprovalStats } from '../types';
+import { ArrowLeft, Search, FileText, Users, Truck, Filter, Download, Eye, CheckCircle, XCircle, AlertTriangle, Clock, UserX, User, MapPin, MoreVertical, LogOut, ChevronDown, Plus } from 'lucide-react';
+import { Service, Driver, ServiceStats } from '../types';
 import ServiceDashboard from './ServiceDashboard';
-import ApprovalDashboard from './ApprovalDashboard';
 import ProgramServiceModal from './ProgramServiceModal';
-import AuthorizationModal from './AuthorizationModal';
-import BulkAuthorizationModal from './BulkAuthorizationModal';
 import CancellationApprovalModal from './CancellationApprovalModal';
 import MassiveProgramModal from './MassiveProgramModal';
 import CreateServiceModal from './CreateServiceModal';
@@ -74,7 +71,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
   onUpdateService,
   onCancellationAction
 }) => {
-  const [activeTab, setActiveTab] = useState<'programming' | 'approval'>('programming');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const tomorrow = new Date();
@@ -84,8 +80,7 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
   const [filters, setFilters] = useState({
     dependency: 'TRANSPORTE PACIENTES REGIONAL CENTRAL',
     selectedStatuses: [] as string[],
-    selectedPassengers: [] as string[],
-    selectedAuthorizationStatus: [] as string[]
+    selectedPassengers: [] as string[]
   });
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(true);
@@ -95,8 +90,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
   
   // Modal states
   const [programModalOpen, setProgramModalOpen] = useState(false);
-  const [authorizationModalOpen, setAuthorizationModalOpen] = useState(false);
-  const [bulkAuthorizationModalOpen, setBulkAuthorizationModalOpen] = useState(false);
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
   const [massiveProgramModalOpen, setMassiveProgramModalOpen] = useState(false);
   const [isCreateServiceModalOpen, setIsCreateServiceModalOpen] = useState(false);
@@ -111,12 +104,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     { value: 'CANCELADO', label: 'Cancelado', color: 'red' },
     { value: 'CANCELACION_SOLICITADA', label: 'Cancelación Solicitada', color: 'orange' },
     { value: 'NO_SHOW', label: 'No Show', color: 'purple' }
-  ];
-
-  // Authorization status options for filter
-  const authorizationStatusOptions = [
-    { value: 'true', label: 'Autorizado', color: 'green' },
-    { value: 'false', label: 'No Autorizado', color: 'red' }
   ];
 
   // Passenger options for filter (extracted from services)
@@ -158,54 +145,35 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
       const matchesPassenger = filters.selectedPassengers.length === 0 ||
         filters.selectedPassengers.includes(service.numero);
 
-      // Authorization status filter
-      const matchesAuthorizationStatus = filters.selectedAuthorizationStatus.length === 0 ||
-        filters.selectedAuthorizationStatus.includes(String(service.estadoAutorizacion));
-
-      return matchesSearch && matchesStatus && matchesPassenger && matchesAuthorizationStatus;
+      return matchesSearch && matchesStatus && matchesPassenger;
     });
 
     // Apply programming mode filter - filter by selected date for PENDIENTE and CANCELACION_SOLICITADA services
-    if (isProgrammingMode || activeTab === 'programming') {
+    if (isProgrammingMode) {
       const selectedDateStr = getDateString(selectedDate);
-      filtered = filtered.filter(service => 
-        service.fechaContratada === selectedDateStr && 
+      filtered = filtered.filter(service =>
+        service.fechaContratada === selectedDateStr &&
         (service.estado === 'PENDIENTE' || service.estado === 'CANCELACION_SOLICITADA')
       );
     }
 
     return filtered;
-  }, [services, searchTerm, filters, isProgrammingMode, activeTab, selectedDate]);
-
-  // Get services that can be authorized (have valid signature and not yet authorized)
-  const authorizableServices = useMemo(() => {
-    return filteredServices.filter(service => 
-      activeTab === 'approval' && 
-      !service.estadoAutorizacion && // false = not authorized yet
-      service.hasValidSignature
-    );
-  }, [filteredServices, activeTab]);
+  }, [services, searchTerm, filters, isProgrammingMode, selectedDate]);
 
   // Get services that can be programmed (PENDIENTE status for selected date)
   const programmableServices = useMemo(() => {
-    if (activeTab !== 'programming') return [];
     const selectedDateStr = getDateString(selectedDate);
-    return services.filter(service => 
+    return services.filter(service =>
       service.fechaContratada === selectedDateStr && service.estado === 'PENDIENTE'
     );
-  }, [services, activeTab, selectedDate]);
+  }, [services, selectedDate]);
 
   // Calculate statistics based on selected date for programming tab
   const serviceStats: ServiceStats = useMemo(() => {
-    let statsServices = filteredServices;
-    
-    // For programming tab, filter by selected date
-    if (activeTab === 'programming') {
-      const selectedDateStr = getDateString(selectedDate);
-      statsServices = services.filter(service => 
-        service.fechaContratada === selectedDateStr
-      );
-    }
+    const selectedDateStr = getDateString(selectedDate);
+    const statsServices = services.filter(service =>
+      service.fechaContratada === selectedDateStr
+    );
 
     return statsServices.reduce((stats, service) => {
       switch (service.estado) {
@@ -229,28 +197,13 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
       cancelacionSolicitada: 0,
       noShow: 0
     });
-  }, [services, activeTab, selectedDate]);
-
-  const approvalStats: ApprovalStats = useMemo(() => {
-    return filteredServices.reduce((stats, service) => {
-      if (service.estadoAutorizacion === true) {
-        stats.autorizado++;
-      } else if (service.estadoAutorizacion === false) {
-        stats.noAutorizado++;
-      }
-      return stats;
-    }, {
-      autorizado: 0,
-      noAutorizado: 0
-    });
-  }, [filteredServices]);
+  }, [services, selectedDate]);
 
   const clearFilters = () => {
     setFilters({
       dependency: 'TRANSPORTE PACIENTES REGIONAL CENTRAL',
       selectedStatuses: [],
-      selectedPassengers: [],
-      selectedAuthorizationStatus: []
+      selectedPassengers: []
     });
     setSearchTerm('');
     setIsProgrammingMode(false);
@@ -260,20 +213,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     setSelectedService(service);
     setProgramModalOpen(true);
     setActiveDropdown(null);
-  };
-
-  const handleAuthorizeService = (service: Service) => {
-    setSelectedService(service);
-    setAuthorizationModalOpen(true);
-    setActiveDropdown(null);
-  };
-
-  const handleBulkAuthorize = () => {
-    if (authorizableServices.length === 0) {
-      alert('No hay servicios con firma válida para autorizar');
-      return;
-    }
-    setBulkAuthorizationModalOpen(true);
   };
 
   const handleMassiveProgram = () => {
@@ -338,34 +277,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     setMassiveProgramModalOpen(false);
   };
 
-  const handleAuthorizationConfirm = (authorized: boolean, observacion?: string) => {
-    if (!selectedService) return;
-
-    const updatedService = {
-      ...selectedService,
-      estadoAutorizacion: authorized,
-      observaciones: observacion || selectedService.observaciones
-    };
-
-    onUpdateService(updatedService);
-    setAuthorizationModalOpen(false);
-    setSelectedService(null);
-  };
-
-  const handleBulkAuthorizationConfirm = (serviceIds: string[], authorized: boolean, observacion?: string) => {
-    serviceIds.forEach(serviceId => {
-      const service = services.find(s => s.id === serviceId);
-      if (service && (authorized ? service.hasValidSignature : true)) {
-        const updatedService = {
-          ...service,
-          estadoAutorizacion: authorized,
-          observaciones: observacion || service.observaciones
-        };
-        onUpdateService(updatedService);
-      }
-    });
-    setBulkAuthorizationModalOpen(false);
-  };
 
   const handleDateChange = (newDate: Date) => {
     setSelectedDate(newDate);
@@ -378,13 +289,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     }));
   };
 
-  // New function to handle approval dashboard clicks
-  const handleApprovalDashboardClick = (type: 'autorizado' | 'noAutorizado') => {
-    setFilters(prev => ({
-      ...prev,
-      selectedAuthorizationStatus: [type === 'autorizado' ? 'true' : 'false']
-    }));
-  };
 
   const toggleDropdown = (serviceId: string) => {
     setActiveDropdown(activeDropdown === serviceId ? null : serviceId);
@@ -409,14 +313,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     return configs[status] || { style: 'bg-gray-100 text-gray-800 border border-gray-200', icon: Clock };
   };
 
-  const getAuthorizationStatusConfig = (authorized: boolean) => {
-    if (authorized) {
-      return { style: 'bg-green-100 text-green-800 border border-green-200', icon: CheckCircle };
-    } else {
-      return { style: 'bg-red-100 text-red-800 border border-red-200', icon: XCircle };
-    }
-  };
-
   const StatusBadge = ({ status }: { status: string }) => {
     const config = getStatusConfig(status);
     const StatusIcon = config.icon;
@@ -428,35 +324,7 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     );
   };
 
-  const AuthorizationStatusBadge = ({ authorized }: { authorized: boolean }) => {
-    const config = getAuthorizationStatusConfig(authorized);
-    const StatusIcon = config.icon;
-    const displayStatus = authorized ? 'AUTORIZADO' : 'NO AUTORIZADO';
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.style}`}>
-        <StatusIcon className="w-3 h-3 mr-1" />
-        {displayStatus}
-      </span>
-    );
-  };
-
-  const SignatureBadge = ({ service }: { service: Service }) => {
-    if (service.hasValidSignature) {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-          <CheckCircle className="w-3 h-3 mr-1" />
-          Firma válida ({service.firmaSize?.toFixed(1)}KB)
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-          <XCircle className="w-3 h-3 mr-1" />
-          Firma inválida ({service.firmaSize?.toFixed(1)}KB)
-        </span>
-      );
-    }
-  };
+  
 
   const formatDateTime = (dateString: string | null | undefined) => {
     if (!dateString) return 'No disponible';
@@ -514,11 +382,10 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
   };
 
   const ActionDropdown = ({ service }: { service: Service }) => {
-    const canProgram = activeTab === 'programming' && service.estado === 'PENDIENTE';
-    const canManageCancellation = activeTab === 'programming' && service.estado === 'CANCELACION_SOLICITADA';
-    const canAuthorize = activeTab === 'approval' && !service.estadoAutorizacion && service.hasValidSignature;
+    const canProgram = service.estado === 'PENDIENTE';
+    const canManageCancellation = service.estado === 'CANCELACION_SOLICITADA';
 
-    if (!canProgram && !canManageCancellation && !canAuthorize) {
+    if (!canProgram && !canManageCancellation) {
       return null;
     }
 
@@ -551,16 +418,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
               >
                 <AlertTriangle className="h-4 w-4 mr-3 text-orange-600" />
                 Gestionar Cancelación
-              </button>
-            )}
-            
-            {canAuthorize && (
-              <button
-                onClick={() => handleAuthorizeService(service)}
-                className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                <CheckCircle className="h-4 w-4 mr-3 text-blue-600" />
-                Autorizar Servicio
               </button>
             )}
             
@@ -626,73 +483,16 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
       </header>
 
       <main className="max-w-7xl mx-auto py-6 px-4 space-y-6">
-        {/* Dashboard Stats - Only show Service Dashboard for Programming tab */}
-        {activeTab === 'programming' && (
-          <ServiceDashboard
-            title="Resumen de Servicios"
-            currentStats={serviceStats}
-            selectedDate={selectedDate}
-            onDateChange={handleDateChange}
-            showDateNavigation={true}
-            onStatusFilter={handleStatusFilter}
-          />
-        )}
+        <ServiceDashboard
+          title="Resumen de Servicios"
+          currentStats={serviceStats}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          showDateNavigation={true}
+          onStatusFilter={handleStatusFilter}
+        />
 
-        {/* Approval Dashboard - Only show for Approval tab with click handlers */}
-        {activeTab === 'approval' && (
-          <div onClick={(e) => {
-            const target = e.target as HTMLElement;
-            if (target.closest('button')) {
-              const button = target.closest('button');
-              if (button?.textContent?.includes('Autorizados')) {
-                handleApprovalDashboardClick('autorizado');
-              } else if (button?.textContent?.includes('No Autorizados')) {
-                handleApprovalDashboardClick('noAutorizado');
-              }
-            }
-          }}>
-            <ApprovalDashboard
-              title="Estado de Autorizaciones"
-              currentStats={approvalStats}
-              previousStats={{ autorizado: 45, noAutorizado: 8 }}
-              dateRange="Últimos 30 días"
-              showComparison={false}
-            />
-          </div>
-        )}
-
-        {/* Tabs */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              <button
-                onClick={() => setActiveTab('programming')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'programming'
-                    ? 'border-[#01be6a] text-[#01be6a]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <Truck className="h-4 w-4" />
-                  <span>Programación</span>
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('approval')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'approval'
-                    ? 'border-[#01be6a] text-[#01be6a]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Autorización de servicios</span>
-                </div>
-              </button>
-            </nav>
-          </div>
 
           {/* Filters Section */}
           <div className="p-6 bg-gray-50 border-b border-gray-200">
@@ -763,38 +563,7 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
               </div>
             )}
 
-            {/* Additional filters row - Show authorization status filter only for approval tab */}
-            {showFilters && activeTab === 'approval' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <StatusMultiSelect
-                    label="Estado de Autorización"
-                    options={authorizationStatusOptions}
-                    selectedValues={filters.selectedAuthorizationStatus}
-                    onChange={(values) => setFilters(prev => ({ ...prev, selectedAuthorizationStatus: values }))}
-                    placeholder="Seleccionar estado de autorización..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Búsqueda general
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01be6a] focus:border-transparent"
-                      placeholder="Buscar en todos los campos..."
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Regular search filter for programming tab */}
-            {showFilters && activeTab === 'programming' && (
+            {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -819,44 +588,29 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
           <div className="px-6 py-4 bg-white border-b border-gray-200">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center space-x-2">
-                {activeTab === 'programming' && (
-                  <>
-                    <button
-                      onClick={() => setIsCreateServiceModalOpen(true)}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Crear Servicio
-                    </button>
-                    <button
-                      onClick={() => setIsFileManagementModalOpen(true)}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Archivo Plano
-                    </button>
-                    <button
-                      onClick={handleMassiveProgram}
-                      disabled={programmableServices.length === 0}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Users className="h-4 w-4 mr-2" />
-                      Programar servicios ({programmableServices.length})
-                    </button>
-                  </>
-                )}
+                <button
+                  onClick={() => setIsCreateServiceModalOpen(true)}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Servicio
+                </button>
+                <button
+                  onClick={() => setIsFileManagementModalOpen(true)}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Archivo Plano
+                </button>
+                <button
+                  onClick={handleMassiveProgram}
+                  disabled={programmableServices.length === 0}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Programar servicios ({programmableServices.length})
+                </button>
 
-                {activeTab === 'approval' && (
-                  <button
-                    onClick={handleBulkAuthorize}
-                    disabled={authorizableServices.length === 0}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Autorización Masiva ({authorizableServices.length})
-                  </button>
-                )}
-                
                 <button className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors">
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
@@ -885,16 +639,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fecha/Hora Contratada
                   </th>
-                  {activeTab === 'approval' && (
-                    <>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha/Hora Inicio
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha/Hora Finalización
-                      </th>
-                    </>
-                  )}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Origen
                   </th>
@@ -904,16 +648,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
-                  {activeTab === 'approval' && (
-                    <>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado Autorización
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Firma Digital
-                      </th>
-                    </>
-                  )}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
@@ -921,8 +655,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredServices.map((service) => {
-                  const serviceTimes = generateServiceTimes(service.fechaHoraInicial);
-                  
                   return (
                     <tr key={service.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -946,16 +678,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-900">{service.fechaHoraInicial}</span>
                       </td>
-                      {activeTab === 'approval' && (
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-900">{serviceTimes.start}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-900">{serviceTimes.end}</span>
-                          </td>
-                        </>
-                      )}
                       <td className="px-6 py-4">
                         <div className="flex items-start max-w-xs">
                           <MapPin className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
@@ -975,16 +697,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <StatusBadge status={service.estado} />
                       </td>
-                      {activeTab === 'approval' && (
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <AuthorizationStatusBadge authorized={service.estadoAutorizacion} />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <SignatureBadge service={service} />
-                          </td>
-                        </>
-                      )}
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <ActionDropdown service={service} />
                       </td>
@@ -1034,58 +746,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
           concepts={mockConcepts}
           onConfirm={handleMassiveProgramConfirm}
           allServices={services}
-        />
-      )}
-
-      {selectedService && authorizationModalOpen && (
-        <AuthorizationModal
-          isOpen={authorizationModalOpen}
-          onClose={() => {
-            setAuthorizationModalOpen(false);
-            setSelectedService(null);
-          }}
-          serviceData={{
-            numero: selectedService.numero,
-            tipoSolicitud: 'Solicitado',
-            fechaSolicitud: formatDateTime(selectedService.fechaSolicitud),
-            fechaContratada: selectedService.fechaContratada,
-            fechaHoraContratada: selectedService.fechaHoraInicial,
-            fechaHoraInicio: generateServiceTimes(selectedService.fechaHoraInicial).start,
-            fechaHoraFinalizacion: generateServiceTimes(selectedService.fechaHoraInicial).end,
-            dependencia: filters.dependency,
-            nombrePasajero: 'Ana María López García',
-            identificacion: '52.123.456',
-            origen: selectedService.origen,
-            destino: selectedService.destino,
-            observacion: selectedService.observaciones || 'Sin observaciones',
-            volante: selectedService.volante,
-            tarifaUT: selectedService.tarifaUT,
-            codTarifa: 'TEI00001',
-            placa: selectedService.placa || 'Sin asignar',
-            estado: selectedService.estado,
-            soporte: 'Documento médico',
-            firma: 'Firmado digitalmente',
-            gestion: 'Automática',
-            tiempoRecorrido: '45 minutos',
-            conductor: selectedService.conductor || 'Sin asignar',
-            kmRecorridos: '15.2 km',
-            valorRecargoACobrar: '$0',
-            valorRecargoAPagar: '$0',
-            fechaInicial: generateServiceTimes(selectedService.fechaHoraInicial).start,
-            fechaFinal: generateServiceTimes(selectedService.fechaHoraInicial).end,
-            concepto: 'Transporte médico',
-            pdfUrl: selectedService.pdfUrl
-          }}
-          onAuthorize={handleAuthorizationConfirm}
-        />
-      )}
-
-      {bulkAuthorizationModalOpen && (
-        <BulkAuthorizationModal
-          isOpen={bulkAuthorizationModalOpen}
-          onClose={() => setBulkAuthorizationModalOpen(false)}
-          services={authorizableServices}
-          onAuthorize={handleBulkAuthorizationConfirm}
         />
       )}
 
