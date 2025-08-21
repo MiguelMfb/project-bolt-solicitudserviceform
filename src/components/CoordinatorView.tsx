@@ -227,12 +227,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
         case 'PROGRAMADO':
           stats.programado++;
           break;
-        case 'FINALIZADO':
-          stats.finalizado++;
-          break;
-        case 'CANCELADO':
-          stats.cancelado++;
-          break;
         case 'CANCELACION_SOLICITADA':
           stats.cancelacionSolicitada++;
           break;
@@ -244,8 +238,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     }, {
       pendiente: 0,
       programado: 0,
-      cancelado: 0,
-      finalizado: 0,
       cancelacionSolicitada: 0,
       noShow: 0
     });
