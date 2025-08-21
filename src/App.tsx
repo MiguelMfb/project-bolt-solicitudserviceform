@@ -7,7 +7,7 @@ import HomeSelector from './components/HomeSelector';
 import ListaServiciosView from './components/ListaServiciosView';
 import SolicitudTransporteView from './components/SolicitudTransporteView';
 import BulkServiceRequestView from './components/BulkServiceRequestView';
-import CoordinatorView from './components/CoordinatorView';
+import CoordinatorPanel from './components/CoordinatorPanel';
 import { Authorization, Service, ServiceFormData } from './types';
 import { 
   mockUserInfo, 
@@ -222,9 +222,9 @@ function App() {
         />
       )}
       
-      {/* Coordinator View */}
+      {/* Coordinator View wrapped with side navigation */}
       {currentView === 'coordinator' && (
-        <CoordinatorView
+        <CoordinatorPanel
           services={sharedServices}
           onGoBack={handleGoHome}
           onUpdateService={handleUpdateService}
