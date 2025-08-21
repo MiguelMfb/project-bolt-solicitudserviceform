@@ -195,7 +195,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statCards.map((stat) => (
           <button
             key={stat.label}
