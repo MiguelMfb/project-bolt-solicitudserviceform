@@ -2,7 +2,6 @@ import React from 'react';
 import {
   BarChart2,
   Calendar,
-  ChevronDown,
   ClipboardList,
   Clock,
   ExternalLink,
@@ -36,10 +35,15 @@ const CoordinatorPanel: React.FC<CoordinatorPanelProps> = ({
         <div className="p-4 text-xl font-bold border-b border-white/20">
           Panel interactivo
         </div>
-        <div className="px-4 py-2 flex items-center justify-between text-sm font-semibold border-b border-white/20">
+        <a
+          href="https://admirable-lebkuchen-9cf734.netlify.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 flex items-center justify-between text-sm font-semibold border-b border-white/20 hover:bg-white/10"
+        >
           <span>Gestión de servicios</span>
-          <ChevronDown className="h-4 w-4" />
-        </div>
+          <ExternalLink className="h-4 w-4" />
+        </a>
         <ul className="flex-1 py-2 space-y-1 text-sm">
           <li className="px-4 py-2 flex items-center space-x-2 opacity-50 cursor-not-allowed">
             <ClipboardList className="h-4 w-4" />
