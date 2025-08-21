@@ -4,12 +4,10 @@ import HomeView from './components/HomeView';
 import AlternativeHomeView from './components/AlternativeHomeView';
 import CorporateHomeView from './components/CorporateHomeView';
 import HomeSelector from './components/HomeSelector';
-import LoginView from './components/LoginView';
 import ListaServiciosView from './components/ListaServiciosView';
 import SolicitudTransporteView from './components/SolicitudTransporteView';
 import BulkServiceRequestView from './components/BulkServiceRequestView';
 import CoordinatorView from './components/CoordinatorView';
-import ChangelogModal from './components/ChangelogModal';
 import { Authorization, Service, ServiceFormData } from './types';
 import { 
   mockUserInfo, 
@@ -18,7 +16,7 @@ import {
   mockPastServices 
 } from './data/mockData';
 
-type AppView = 'home' | 'user-login' | 'coordinator-login' | 'user-list' | 'user-form' | 'user-bulk-form' | 'coordinator';
+type AppView = 'home' | 'user-list' | 'user-form' | 'user-bulk-form' | 'coordinator';
 type HomeType = 'original' | 'alternative' | 'corporate';
 
 function App() {
@@ -29,51 +27,8 @@ function App() {
   const [sharedServices, setSharedServices] = useState<Service[]>(mockPastServices);
   const [newlyAddedServiceId, setNewlyAddedServiceId] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState(mockUserInfo);
-  const [showChangelog, setShowChangelog] = useState(false);
-
-  // Show changelog on first load - ALWAYS show it now
-  useEffect(() => {
-    // Always show changelog when app loads
-    setShowChangelog(true);
-  }, []);
-
-  const handleCloseChangelog = () => {
-    setShowChangelog(false);
-    localStorage.setItem('hasSeenChangelog_v1.0', 'true');
-  };
-
-  const handleNavigateToChange = (changeId: string) => {
-    // Navigation logic based on change ID
-    switch (changeId) {
-      case 'profile-address-readonly':
-      case 'programmed-services-no-cancel':
-      case 'bulk-confirmation-improved':
-        // Navigate to user portal
-        setCurrentView('user-list');
-        break;
-      case 'coordinator-date-filter':
-      case 'massive-programming-button':
-      case 'driver-conflict-validation':
-      case 'cancellation-request-management':
-      case 'cancellation-in-programming-tab':
-        // Navigate to coordinator portal
-        setCurrentView('coordinator');
-        break;
-      default:
-        // Stay on home
-        break;
-    }
-  };
 
   const handleSelectRole = (role: 'user' | 'coordinator') => {
-    if (role === 'user') {
-      setCurrentView('user-login');
-    } else {
-      setCurrentView('coordinator-login');
-    }
-  };
-
-  const handleLoginSuccess = (role: 'user' | 'coordinator') => {
     if (role === 'user') {
       setCurrentView('user-list');
     } else {
@@ -84,14 +39,6 @@ function App() {
   const handleGoHome = () => {
     setCurrentView('home');
     setSelectedAuthorization(null);
-  };
-
-  const handleGoBackToLogin = (role: 'user' | 'coordinator') => {
-    if (role === 'user') {
-      setCurrentView('user-login');
-    } else {
-      setCurrentView('coordinator-login');
-    }
   };
 
   const handleShowForm = (authorization: Authorization) => {
@@ -221,19 +168,6 @@ function App() {
         />
       )}
 
-      {/* Changelog Button - Only show on home view when modal is not open */}
-      {currentView === 'home' && !showChangelog && (
-        <button
-          onClick={() => setShowChangelog(true)}
-          className="fixed top-6 left-6 z-40 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Ver cambios
-        </button>
-      )}
-
       {/* Home Views */}
       {currentView === 'home' && currentHome === 'original' && (
         <HomeView onSelectRole={handleSelectRole} />
@@ -247,23 +181,6 @@ function App() {
         <CorporateHomeView onSelectRole={handleSelectRole} />
       )}
 
-      {/* Login Views */}
-      {currentView === 'user-login' && (
-        <LoginView
-          role="user"
-          onLogin={() => handleLoginSuccess('user')}
-          onGoBack={handleGoHome}
-        />
-      )}
-
-      {currentView === 'coordinator-login' && (
-        <LoginView
-          role="coordinator"
-          onLogin={() => handleLoginSuccess('coordinator')}
-          onGoBack={handleGoHome}
-        />
-      )}
-      
       {/* User Views */}
       {currentView === 'user-list' && (
         <ListaServiciosView
@@ -315,12 +232,6 @@ function App() {
         />
       )}
 
-      {/* Changelog Modal */}
-      <ChangelogModal
-        isOpen={showChangelog}
-        onClose={handleCloseChangelog}
-        onNavigateToChange={handleNavigateToChange}
-      />
     </div>
   );
 }
