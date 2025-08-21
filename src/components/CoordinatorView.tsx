@@ -1,9 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, Search, FileText, Users, Truck, Filter, X, Download, Eye, CheckCircle, XCircle, AlertTriangle, Clock, UserX, User, Car, MapPin, MoreVertical, Edit, Ban, LogOut, ChevronDown, Plus, Calendar } from 'lucide-react';
-import DatePicker from 'react-datepicker';
-import { registerLocale } from 'react-datepicker';
-import es from 'date-fns/locale/es';
-import 'react-datepicker/dist/react-datepicker.css';
+import { ArrowLeft, Search, FileText, Users, Truck, Filter, X, Download, Eye, CheckCircle, XCircle, AlertTriangle, Clock, UserX, User, Car, MapPin, MoreVertical, Edit, Ban, LogOut, ChevronDown, Plus } from 'lucide-react';
 import { Service, Driver, ServiceStats, ApprovalStats } from '../types';
 import ServiceDashboard from './ServiceDashboard';
 import ApprovalDashboard from './ApprovalDashboard';
@@ -16,9 +12,6 @@ import CreateServiceModal from './CreateServiceModal';
 import FileManagementModal from './FileManagementModal';
 import StatusMultiSelect from './StatusMultiSelect';
 import MultiSelectFilter from './MultiSelectFilter';
-
-// Register Spanish locale
-registerLocale('es', es);
 
 interface CoordinatorViewProps {
   services: Service[];
@@ -92,8 +85,7 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
     dependency: 'TRANSPORTE PACIENTES REGIONAL CENTRAL',
     selectedStatuses: [] as string[],
     selectedPassengers: [] as string[],
-    selectedAuthorizationStatus: [] as string[], // New filter for authorization status
-    contractedDate: null as Date | null // New filter for contracted date
+    selectedAuthorizationStatus: [] as string[]
   });
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(true);
@@ -166,15 +158,11 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
       const matchesPassenger = filters.selectedPassengers.length === 0 ||
         filters.selectedPassengers.includes(service.numero);
 
-      // New authorization status filter
+      // Authorization status filter
       const matchesAuthorizationStatus = filters.selectedAuthorizationStatus.length === 0 ||
         filters.selectedAuthorizationStatus.includes(String(service.estadoAutorizacion));
 
-      // New contracted date filter
-      const matchesContractedDate = !filters.contractedDate ||
-        service.fechaContratada === getDateString(filters.contractedDate);
-
-      return matchesSearch && matchesStatus && matchesPassenger && matchesAuthorizationStatus && matchesContractedDate;
+      return matchesSearch && matchesStatus && matchesPassenger && matchesAuthorizationStatus;
     });
 
     // Apply programming mode filter - filter by selected date for PENDIENTE and CANCELACION_SOLICITADA services
@@ -262,8 +250,7 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
       dependency: 'TRANSPORTE PACIENTES REGIONAL CENTRAL',
       selectedStatuses: [],
       selectedPassengers: [],
-      selectedAuthorizationStatus: [],
-      contractedDate: null
+      selectedAuthorizationStatus: []
     });
     setSearchTerm('');
     setIsProgrammingMode(false);
@@ -773,25 +760,6 @@ const CoordinatorView: React.FC<CoordinatorViewProps> = ({
                   onChange={(values) => setFilters(prev => ({ ...prev, selectedPassengers: values }))}
                   placeholder="Seleccionar pasajeros..."
                 />
-
-                {/* New Contracted Date Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha Contratada
-                  </label>
-                  <div className="relative">
-                    <DatePicker
-                      selected={filters.contractedDate}
-                      onChange={(date) => setFilters(prev => ({ ...prev, contractedDate: date }))}
-                      dateFormat="dd/MM/yyyy"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01be6a] focus:border-transparent"
-                      placeholderText="Seleccionar fecha..."
-                      locale="es"
-                      isClearable
-                    />
-                    <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
               </div>
             )}
 

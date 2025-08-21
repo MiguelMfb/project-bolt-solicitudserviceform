@@ -49,14 +49,6 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({
       color: 'green'
     },
     {
-      id: 'coordinator-date-filter',
-      title: 'Nuevo filtro por fecha contratada en coordinación',
-      description: 'Se reemplazó el filtro de identificación por un filtro de fecha contratada en el portal coordinador para mejor gestión temporal.',
-      category: 'coordinator',
-      icon: Calendar,
-      color: 'purple'
-    },
-    {
       id: 'massive-programming-button',
       title: 'Renombrado de botón de programación masiva',
       description: 'El botón para programación masiva ahora se llama "Programar servicios" para mayor claridad.',
