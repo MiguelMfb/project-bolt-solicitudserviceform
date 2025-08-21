@@ -8,7 +8,7 @@ import LoginView from './components/LoginView';
 import ListaServiciosView from './components/ListaServiciosView';
 import SolicitudTransporteView from './components/SolicitudTransporteView';
 import BulkServiceRequestView from './components/BulkServiceRequestView';
-import CoordinatorView from './components/CoordinatorView';
+import CoordinatorPanel from './components/CoordinatorPanel';
 import ChangelogModal from './components/ChangelogModal';
 import { Authorization, Service, ServiceFormData } from './types';
 import { 
@@ -305,9 +305,9 @@ function App() {
         />
       )}
       
-      {/* Coordinator View */}
+      {/* Coordinator View wrapped with side navigation */}
       {currentView === 'coordinator' && (
-        <CoordinatorView
+        <CoordinatorPanel
           services={sharedServices}
           onGoBack={handleGoHome}
           onUpdateService={handleUpdateService}
