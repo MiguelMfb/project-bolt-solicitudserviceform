@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle, XCircle, AlertTriangle, UserX, Truck, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, UserX, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import { registerLocale } from 'react-datepicker';
 import es from 'date-fns/locale/es';
@@ -11,8 +11,6 @@ registerLocale('es', es);
 interface ServiceStats {
   pendiente: number;
   programado: number;
-  cancelado: number;
-  finalizado: number;
   cancelacionSolicitada: number;
   noShow: number;
 }
@@ -56,26 +54,6 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({
       iconColor: 'text-green-600',
       textColor: 'text-green-900',
       status: 'PROGRAMADO'
-    },
-    {
-      label: 'Finalizados',
-      current: currentStats.finalizado,
-      icon: Truck,
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
-      iconColor: 'text-blue-600',
-      textColor: 'text-blue-900',
-      status: 'FINALIZADO'
-    },
-    {
-      label: 'Cancelados',
-      current: currentStats.cancelado,
-      icon: XCircle,
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      iconColor: 'text-red-600',
-      textColor: 'text-red-900',
-      status: 'CANCELADO'
     },
     {
       label: 'Cancelación Solicitada',

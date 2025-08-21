@@ -88,8 +88,6 @@ export interface Driver {
 export interface ServiceStats {
   pendiente: number;
   programado: number;
-  cancelado: number;
-  finalizado: number;
   cancelacionSolicitada: number;
   noShow: number;
 }
