@@ -23,21 +23,6 @@ export const mockPatientInfo: PatientInfo = {
 export const mockAuthorizations: Authorization[] = [
   {
     id: '1',
-    periodo: '202501',
-    volante: '20000028',
-    fechaInicial: '1/01/2025',
-    fechaFinal: '31/01/2025',
-    tarifaAutorizada: 'TEI00001',
-    tarifaUT: 'INTERNO BTA',
-    cantidad: 20,
-    disponible: 1,
-    usadas: 19,
-    estado: 'Volante Cerrado',
-    ciudadA: 'Bogotá D.C.',
-    ciudadB: 'Soacha'
-  },
-  {
-    id: '2',
     periodo: '202502',
     volante: '20000029',
     fechaInicial: '1/02/2025',
@@ -52,7 +37,7 @@ export const mockAuthorizations: Authorization[] = [
     ciudadB: 'Facatativá'
   },
   {
-    id: '3',
+    id: '2',
     periodo: '202503',
     volante: '20000030',
     fechaInicial: '1/03/2025',
@@ -67,7 +52,7 @@ export const mockAuthorizations: Authorization[] = [
     ciudadB: 'Zipaquirá'
   },
   {
-    id: '4',
+    id: '3',
     periodo: '202503',
     volante: '20000031',
     fechaInicial: '16/03/2025',
@@ -82,7 +67,7 @@ export const mockAuthorizations: Authorization[] = [
     ciudadB: 'Aeropuerto El Dorado'
   },
   {
-      id: '5',
+      id: '4',
       periodo: '202503',
       volante: '20000032',
       fechaInicial: '16/03/2025',
@@ -92,36 +77,6 @@ export const mockAuthorizations: Authorization[] = [
       cantidad: 4,
       disponible: 2,
       usadas: 2,
-      estado: 'Disponibles',
-      ciudadA: 'Chía',
-      ciudadB: 'Bogotá D.C.'
-    },
-    {
-      id: '6',
-      periodo: '202504',
-      volante: '20000041',
-      fechaInicial: '01/04/2025',
-      fechaFinal: '30/04/2025',
-      tarifaAutorizada: 'TMR00001',
-      tarifaUT: 'RAMPA BTA',
-      cantidad: 8,
-      disponible: 8,
-      usadas: 0,
-      estado: 'Disponibles',
-      ciudadA: 'Bogotá D.C.',
-      ciudadB: 'Aeropuerto El Dorado'
-    },
-    {
-      id: '7',
-      periodo: '202504',
-      volante: '20000042',
-      fechaInicial: '01/04/2025',
-      fechaFinal: '30/04/2025',
-      tarifaAutorizada: 'TEI00062',
-      tarifaUT: 'CHIA/BTA',
-      cantidad: 4,
-      disponible: 4,
-      usadas: 0,
       estado: 'Disponibles',
       ciudadA: 'Chía',
       ciudadB: 'Bogotá D.C.'
