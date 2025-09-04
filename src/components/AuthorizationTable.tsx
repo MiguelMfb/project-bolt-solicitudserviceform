@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Authorization } from '../types';
+import { Authorization, GroupedAuthorization } from '../types';
 import { Eye, FileText, Calendar, BarChart3, CheckCircle, XCircle, Clock, AlertTriangle, MapPin, Plus, ChevronDown, PlusCircle } from 'lucide-react';
 
 interface AuthorizationTableProps {
-  authorizations: Authorization[];
+  authorizations: GroupedAuthorization[];
   onShowForm: (authorization: Authorization) => void;
   onShowBulkForm: (authorization: Authorization) => void;
   onViewServices: (volante: string) => void;
@@ -91,7 +91,7 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({
         <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
           <tr>
             <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Volante / Tarifa
+              Tarifa / Volantes
             </th>
             <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
               Periodo / Vigencia
@@ -133,10 +133,10 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({
                     </div>
                     <div className="ml-4">
                       <div className="text-sm font-bold text-gray-900">
-                        {auth.volante}
-                      </div>
-                      <div className="text-sm text-gray-600 font-medium">
                         {auth.tarifaUT}
+                      </div>
+                      <div className="text-sm text-gray-600 font-medium whitespace-pre-line">
+                        {auth.volantes.join('\n')}
                       </div>
                     </div>
                   </div>
@@ -204,7 +204,7 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({
                 <td className="px-6 py-5">
                   <div className="flex items-center justify-center space-x-3">
                     <button
-                      onClick={() => onViewServices(auth.volante)}
+                      onClick={() => onViewServices(auth.volantes[0])}
                       className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-sm hover:shadow-md"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -326,10 +326,10 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({
                       </div>
                       <div className="ml-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {auth.volante}
-                        </div>
-                        <div className="text-xs text-gray-500">
                           {auth.tarifaUT}
+                        </div>
+                        <div className="text-xs text-gray-500 whitespace-pre-line">
+                          {auth.volantes.join('\n')}
                         </div>
                         <div className="text-xs text-gray-500">
                           {auth.periodo}
@@ -370,7 +370,7 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({
                   <td className="px-4 py-4">
                     <div className="flex flex-col space-y-2">
                       <button
-                        onClick={() => onViewServices(auth.volante)}
+                        onClick={() => onViewServices(auth.volantes[0])}
                         className="inline-flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm"
                       >
                         <Eye className="h-3 w-3 mr-1" />
@@ -481,8 +481,8 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({
                       <h3 className="text-lg font-bold text-gray-900">
                         {auth.tarifaUT}
                       </h3>
-                      <p className="text-sm text-gray-600">
-                        Volante: {auth.volante}
+                      <p className="text-sm text-gray-600 whitespace-pre-line">
+                        {`Volante:${auth.volantes.length > 1 ? '\n' : ' '}${auth.volantes.join('\n')}`}
                       </p>
                     </div>
                   </div>
@@ -565,7 +565,7 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={() => onViewServices(auth.volante)}
+                    onClick={() => onViewServices(auth.volantes[0])}
                     className="w-full inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm"
                   >
                     <Eye className="h-4 w-4 mr-2" />

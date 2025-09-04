@@ -35,6 +35,10 @@ export interface Authorization {
   ciudadB: string;
 }
 
+export interface GroupedAuthorization extends Authorization {
+  volantes: string[];
+}
+
 export interface Service {
   id: string;
   numero: string;
