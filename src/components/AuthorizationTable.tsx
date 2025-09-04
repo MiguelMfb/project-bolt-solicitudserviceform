@@ -27,16 +27,18 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({ authorizations,
                 <div className="text-sm font-medium text-gray-900">{auth.tarifaUT}</div>
                 <div className="text-sm text-gray-500">{auth.tarifaAutorizada}</div>
               </td>
-              <td className="px-4 py-3 whitespace-pre-line text-sm text-gray-900">
-                {auth.volantes.map((volante) => (
-                  <div
-                    key={volante}
-                    className={onViewServices ? 'cursor-pointer text-blue-600 hover:underline' : ''}
-                    onClick={() => onViewServices && onViewServices(volante)}
-                  >
-                    {volante}
-                  </div>
-                ))}
+              <td className="px-4 py-3 text-sm text-gray-900">
+                <div className="flex flex-col gap-1">
+                  {auth.volantes.map((volante) => (
+                    <span
+                      key={volante}
+                      className={onViewServices ? 'cursor-pointer text-blue-600 hover:underline' : ''}
+                      onClick={() => onViewServices && onViewServices(volante)}
+                    >
+                      {volante}
+                    </span>
+                  ))}
+                </div>
               </td>
               <td className="px-4 py-3 text-sm text-gray-900">
                 {auth.fechaInicial} - {auth.fechaFinal}
