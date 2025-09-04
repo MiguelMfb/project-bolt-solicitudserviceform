@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaSearch } from 'react-icons/fa';
-import { UserInfo, PatientInfo, Authorization, Service } from '../types';
+import { UserInfo, PatientInfo, Authorization, Service, GroupedAuthorization } from '../types';
 import UserDropdown from './UserDropdown';
 import PatientInfoBlock from './PatientInfoBlock';
 import ModifyServiceModal from './ModifyServiceModal';
@@ -43,7 +43,7 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
   const [serviceToCancel, setServiceToCancel] = useState<Service | null>(null);
   const [selectedVolante, setSelectedVolante] = useState<string | null>(null);
 
-  const sortAuthorizations = (auths: Authorization[]) => {
+  const sortAuthorizations = (auths: GroupedAuthorization[]) => {
     return [...auths].sort((a, b) => {
       const statusPriority = {
         'Disponibles': 0,
@@ -58,9 +58,42 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
     });
   };
 
+  const groupAuthorizations = (auths: Authorization[]): GroupedAuthorization[] => {
+    const groups: Record<string, Authorization[]> = {};
+    auths.forEach((auth) => {
+      const key = auth.tarifaAutorizada;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(auth);
+    });
+
+    const parseDate = (dateStr: string) => {
+      const [day, month, year] = dateStr.split('/').map(Number);
+      return new Date(year, month - 1, day).getTime();
+    };
+
+    return Object.values(groups).map((group) => {
+      const sortedGroup = [...group].sort((a, b) => parseDate(a.fechaInicial) - parseDate(b.fechaInicial));
+      const first = sortedGroup[0];
+      const volantes = group.map((a) => a.volante);
+      const total = group.reduce((sum, a) => sum + a.cantidad, 0) / group.length;
+      return { ...first, cantidad: Math.round(total), volantes };
+    });
+  };
+
+  const groupedAuthorizations = groupAuthorizations(authorizations);
+
   const filteredAuthorizations = sortAuthorizations(
-    authorizations.filter((auth) =>
-      Object.values(auth).some((value) =>
+    groupedAuthorizations.filter((auth) =>
+      [
+        auth.tarifaUT,
+        auth.periodo,
+        auth.fechaInicial,
+        auth.fechaFinal,
+        auth.ciudadA,
+        auth.ciudadB,
+        auth.estado,
+        ...auth.volantes
+      ].some((value) =>
         String(value).toLowerCase().includes(authSearchTerm.toLowerCase())
       )
     )
