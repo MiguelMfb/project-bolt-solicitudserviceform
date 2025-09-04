@@ -77,7 +77,33 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
       );
       const first = sortedGroup[0];
       const volantes = group.map((a) => a.volante);
-      return { ...first, volantes };
+
+      // Aggregate totals across all volantes in the group
+      const cantidad = group.reduce((sum, a) => sum + (a.cantidad || 0), 0);
+      const disponible = group.reduce((sum, a) => sum + (a.disponible || 0), 0);
+      const usadas = group.reduce((sum, a) => sum + (a.usadas || 0), 0);
+
+      // Compute overall date window
+      const fechaInicial = group.reduce((min, a) => parseDate(a.fechaInicial) < parseDate(min) ? a.fechaInicial : min, group[0].fechaInicial);
+      const fechaFinal = group.reduce((max, a) => parseDate(a.fechaFinal) > parseDate(max) ? a.fechaFinal : max, group[0].fechaFinal);
+
+      // Derive estado based on availability
+      const estado: Authorization['estado'] = disponible > 0
+        ? 'Disponibles'
+        : group.every(a => a.estado === 'Volante Cerrado')
+          ? 'Volante Cerrado'
+          : 'No Disponibles';
+
+      return {
+        ...first,
+        cantidad,
+        disponible,
+        usadas,
+        fechaInicial,
+        fechaFinal,
+        estado,
+        volantes,
+      } as GroupedAuthorization;
     });
   };
 
@@ -150,6 +176,15 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
     document.getElementById('services-history')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Acciones para abrir los formularios desde la tabla
+  const handleRequestSingle = (auth: GroupedAuthorization) => {
+    _onShowForm(auth);
+  };
+
+  const handleRequestBulk = (auth: GroupedAuthorization) => {
+    _onShowBulkForm(auth);
+  };
+
   const clearFilters = () => {
     setSelectedVolante(null);
     setHistorySearchTerm('');
@@ -205,6 +240,8 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
           <AuthorizationTable
             authorizations={filteredAuthorizations}
             onViewServices={handleViewServices}
+            onRequestSingle={handleRequestSingle}
+            onRequestBulk={handleRequestBulk}
           />
 
           {filteredAuthorizations.length === 0 && (

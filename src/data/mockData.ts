@@ -80,6 +80,22 @@ export const mockAuthorizations: Authorization[] = [
       estado: 'Disponibles',
       ciudadA: 'Chía',
       ciudadB: 'Bogotá D.C.'
+    },
+  // Autorización vigente con doble volante (mismo código de tarifa para agrupar)
+  {
+      id: '5',
+      periodo: '202503',
+      volante: '20000033',
+      fechaInicial: '16/03/2025',
+      fechaFinal: '30/03/2025',
+      tarifaAutorizada: 'TEI00062',
+      tarifaUT: 'CHIA/BTA',
+      cantidad: 4,
+      disponible: 2,
+      usadas: 2,
+      estado: 'Disponibles',
+      ciudadA: 'Ch��a',
+      ciudadB: 'Bogotǭ D.C.'
     }
   ];
 

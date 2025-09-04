@@ -24,6 +24,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
+  // Support grouped authorizations (doble volante): list of volantes and combined disponibles
+  const volantesList: string[] = (authorization as any)?.volantes?.length
+    ? (authorization as any).volantes
+    : [authorization.volante];
+  const disponiblesTotales = authorization.disponible;
+
   // Group services by date for better organization
   const servicesByDate = useMemo(() => {
     const grouped = services.reduce((acc, service) => {
@@ -219,9 +225,15 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                         <h4 className="font-medium text-blue-900 mb-2">Resumen de la Solicitud</h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-blue-700">Volante:</span>
-                            <p className="font-medium text-blue-900">{authorization.volante}</p>
+                          <div className="md:col-span-2">
+                            <span className="text-blue-700">{volantesList.length > 1 ? 'Volantes:' : 'Volante:'}</span>
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              {volantesList.map(v => (
+                                <span key={v} className="px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-blue-900 font-medium">
+                                  {v}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                           <div>
                             <span className="text-blue-700">Tarifa:</span>
@@ -233,7 +245,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                           </div>
                           <div>
                             <span className="text-blue-700">Disponibles:</span>
-                            <p className="font-medium text-blue-900">{authorization.disponible}</p>
+                            <p className="font-medium text-blue-900">{disponiblesTotales}</p>
                           </div>
                         </div>
                       </div>
@@ -327,7 +339,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                         <li>• Una vez confirmada, la solicitud será enviada para procesamiento</li>
                         <li>• Recibirá confirmación por correo electrónico</li>
                         <li>• Los servicios pueden ser modificados o cancelados hasta 3 horas antes</li>
-                        <li>• Se descontarán {services.length} servicio(s) de sus autorizaciones disponibles</li>
+                        <li>Se descontaran {services.length} servicio(s) de sus autorizaciones disponibles (de {disponiblesTotales} en total)</li>
                       </ul>
                     </div>
 
