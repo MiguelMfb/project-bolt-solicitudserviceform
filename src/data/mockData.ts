@@ -82,21 +82,51 @@ export const mockAuthorizations: Authorization[] = [
     ciudadB: 'Aeropuerto El Dorado'
   },
   {
-    id: '5',
-    periodo: '202503',
-    volante: '20000032',
-    fechaInicial: '16/03/2025',
-    fechaFinal: '30/03/2025',
-    tarifaAutorizada: 'TEI00062',
-    tarifaUT: 'CHIA/BTA',
-    cantidad: 4,
-    disponible: 2,
-    usadas: 2,
-    estado: 'Disponibles',
-    ciudadA: 'Chía',
-    ciudadB: 'Bogotá D.C.'
-  }
-];
+      id: '5',
+      periodo: '202503',
+      volante: '20000032',
+      fechaInicial: '16/03/2025',
+      fechaFinal: '30/03/2025',
+      tarifaAutorizada: 'TEI00062',
+      tarifaUT: 'CHIA/BTA',
+      cantidad: 4,
+      disponible: 2,
+      usadas: 2,
+      estado: 'Disponibles',
+      ciudadA: 'Chía',
+      ciudadB: 'Bogotá D.C.'
+    },
+    {
+      id: '6',
+      periodo: '202504',
+      volante: '20000041',
+      fechaInicial: '01/04/2025',
+      fechaFinal: '30/04/2025',
+      tarifaAutorizada: 'TMR00001',
+      tarifaUT: 'RAMPA BTA',
+      cantidad: 8,
+      disponible: 8,
+      usadas: 0,
+      estado: 'Disponibles',
+      ciudadA: 'Bogotá D.C.',
+      ciudadB: 'Aeropuerto El Dorado'
+    },
+    {
+      id: '7',
+      periodo: '202504',
+      volante: '20000042',
+      fechaInicial: '01/04/2025',
+      fechaFinal: '30/04/2025',
+      tarifaAutorizada: 'TEI00062',
+      tarifaUT: 'CHIA/BTA',
+      cantidad: 4,
+      disponible: 4,
+      usadas: 0,
+      estado: 'Disponibles',
+      ciudadA: 'Chía',
+      ciudadB: 'Bogotá D.C.'
+    }
+  ];
 
 // Get today's date for current services
 const today = new Date();
