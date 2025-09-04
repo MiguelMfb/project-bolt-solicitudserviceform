@@ -28,8 +28,8 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
   authorizations,
   pastServices,
   newlyAddedServiceId,
-  onShowForm,
-  onShowBulkForm,
+  onShowForm: _onShowForm,
+  onShowBulkForm: _onShowBulkForm,
   onUpdateService,
   onCancelService,
   onUpdateUserInfo,
@@ -72,11 +72,12 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
     };
 
     return Object.values(groups).map((group) => {
-      const sortedGroup = [...group].sort((a, b) => parseDate(a.fechaInicial) - parseDate(b.fechaInicial));
+      const sortedGroup = [...group].sort(
+        (a, b) => parseDate(a.fechaInicial) - parseDate(b.fechaInicial)
+      );
       const first = sortedGroup[0];
       const volantes = group.map((a) => a.volante);
-      const total = group.reduce((sum, a) => sum + a.cantidad, 0) / group.length;
-      return { ...first, cantidad: Math.round(total), volantes };
+      return { ...first, volantes };
     });
   };
 
@@ -203,8 +204,6 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
           {/* Authorization Table */}
           <AuthorizationTable
             authorizations={filteredAuthorizations}
-            onShowForm={onShowForm}
-            onShowBulkForm={onShowBulkForm}
             onViewServices={handleViewServices}
           />
 
