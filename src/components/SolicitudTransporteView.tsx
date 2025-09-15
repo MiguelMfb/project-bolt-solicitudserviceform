@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Phone, FileText } from 'lucide-react';
+import { Calendar, MapPin, Phone, FileText, Plus, X, Edit3, CheckCircle2 } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import es from 'date-fns/locale/es';
 import { addDays, setHours, setMinutes, startOfDay } from 'date-fns';
@@ -10,6 +10,7 @@ import PatientInfoBlock from './PatientInfoBlock';
 import ConfirmationModal from './ConfirmationModal';
 import AddressSelector from './AddressSelector';
 import LimitModal from './LimitModal';
+import CancelRequestModal from './CancelRequestModal';
 
 // Register Spanish locale
 registerLocale('es', es);
@@ -22,6 +23,7 @@ interface SolicitudTransporteViewProps {
   onScheduleServices: (services: ServiceFormData[]) => void;
   onUpdateUserInfo: (updatedInfo: { email: string; phoneNumber: string; address: string }) => void;
   onLogout: () => void;
+  initialMode?: 'single' | 'bulk';
 }
 
 const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
@@ -31,7 +33,8 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
   onGoBack,
   onScheduleServices,
   onUpdateUserInfo,
-  onLogout
+  onLogout,
+  initialMode = 'single'
 }) => {
   // If the authorization comes from a grouped item, it may include multiple volantes
   const volantesList: string[] = (authorization as any)?.volantes?.length
@@ -52,12 +55,17 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     tipo: 'IDA',
     observaciones: ''
   }]);
-  
+
+  const [requestMode, setRequestMode] = useState<'single' | 'bulk'>(initialMode);
+  const [bulkServices, setBulkServices] = useState<ServiceFormData[]>([]);
+  const [editingBulkAddresses, setEditingBulkAddresses] = useState<Record<string, { origen?: boolean; destino?: boolean }>>({});
   const [hasReturnService, setHasReturnService] = useState(false);
   const [hasReadInfo, setHasReadInfo] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [servicesToConfirm, setServicesToConfirm] = useState<ServiceFormData[]>([]);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   // Get available cities from authorization
   const availableCities = [authorization.ciudadA, authorization.ciudadB];
@@ -85,6 +93,67 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     return 'react-datepicker__day--enabled';
   };
 
+  const syncReturnWithMain = (list: ServiceFormData[]) => {
+    const mainService = list.find(service => service.tipo === 'IDA');
+    const returnService = list.find(service => service.tipo === 'REGRESO');
+
+    if (!mainService || !returnService) {
+      return list;
+    }
+
+    return list.map(service =>
+      service.id === returnService.id
+        ? {
+            ...service,
+            origen: mainService.destino || '',
+            destino: mainService.origen || '',
+            ciudadOrigen: mainService.ciudadDestino || '',
+            ciudadDestino: mainService.ciudadOrigen || '',
+            barrioOrigen: mainService.barrioDestino || '',
+            barrioDestino: mainService.barrioOrigen || '',
+            conAcompanante: mainService.conAcompanante,
+            telefonoAdicional: mainService.telefonoAdicional,
+          }
+        : service
+    );
+  };
+
+  const createBulkService = (template?: ServiceFormData, tipo: 'IDA' | 'REGRESO' = 'IDA'): ServiceFormData => ({
+    id: crypto.randomUUID(),
+    origen: template?.origen || '',
+    destino: template?.destino || '',
+    ciudadOrigen: template?.ciudadOrigen || '',
+    ciudadDestino: template?.ciudadDestino || '',
+    barrioOrigen: template?.barrioOrigen || '',
+    barrioDestino: template?.barrioDestino || '',
+    fechaHora: null,
+    idaYRegreso: false,
+    conAcompanante: template?.conAcompanante || false,
+    telefonoAdicional: template?.telefonoAdicional || '',
+    tipo,
+    observaciones: template?.observaciones || '',
+  });
+
+  const buildInitialBulkServices = () => {
+    const mainService = services.find(service => service.tipo === 'IDA') || services[0];
+    const returnService = services.find(service => service.tipo === 'REGRESO');
+
+    if (!mainService) {
+      return Array.from({ length: 10 }, () => createBulkService());
+    }
+
+    const alternateWithReturn = hasReturnService && !!returnService;
+
+    return Array.from({ length: 10 }, (_, index) => {
+      if (alternateWithReturn) {
+        const isReturnRow = index % 2 === 1;
+        return createBulkService(isReturnRow ? returnService : mainService, isReturnRow ? 'REGRESO' : 'IDA');
+      }
+
+      return createBulkService(mainService, 'IDA');
+    });
+  };
+
   useEffect(() => {
     setServices([{
       id: crypto.randomUUID(),
@@ -104,33 +173,28 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     setHasReturnService(false);
     setWarningMessage(null);
     setHasReadInfo(false);
-  }, [authorization]);
+    setRequestMode(initialMode);
+    setBulkServices([]);
+    setEditingBulkAddresses({});
+    setServicesToConfirm([]);
+    setIsCancelModalOpen(false);
+  }, [authorization, initialMode]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- se recalcula solo al activar modo masivo o regreso
+  useEffect(() => {
+    if (requestMode === 'bulk') {
+      setBulkServices(buildInitialBulkServices());
+      setEditingBulkAddresses({});
+    }
+  }, [requestMode, hasReturnService]);
 
   const handleServiceChange = (serviceId: string, field: keyof ServiceFormData, value: any) => {
-    setServices(prev => prev.map(service => 
-      service.id === serviceId ? { ...service, [field]: value } : service
-    ));
-
-    if (hasReturnService && (field === 'origen' || field === 'destino' || field === 'ciudadOrigen' || field === 'ciudadDestino' || field === 'barrioOrigen' || field === 'barrioDestino')) {
-      const mainService = services.find(s => s.tipo === 'IDA');
-      const returnService = services.find(s => s.tipo === 'REGRESO');
-      
-      if (mainService && returnService) {
-        setServices(prev => prev.map(service => 
-          service.id === returnService.id
-            ? {
-                ...service,
-                origen: field === 'destino' ? value : field === 'origen' ? service.origen : service.origen,
-                destino: field === 'origen' ? value : field === 'destino' ? service.destino : service.destino,
-                ciudadOrigen: field === 'ciudadDestino' ? value : field === 'ciudadOrigen' ? service.ciudadOrigen : service.ciudadOrigen,
-                ciudadDestino: field === 'ciudadOrigen' ? value : field === 'ciudadDestino' ? service.ciudadDestino : service.ciudadDestino,
-                barrioOrigen: field === 'barrioDestino' ? value : field === 'barrioOrigen' ? service.barrioOrigen : service.barrioOrigen,
-                barrioDestino: field === 'barrioOrigen' ? value : field === 'barrioDestino' ? service.barrioDestino : service.barrioDestino
-              }
-            : service
-        ));
-      }
-    }
+    setServices(prev => {
+      const updated = prev.map(service =>
+        service.id === serviceId ? { ...service, [field]: value } : service
+      );
+      return syncReturnWithMain(updated);
+    });
   };
 
   const canToggleReturn = () => {
@@ -149,21 +213,27 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     setHasReturnService(enabled);
     if (enabled) {
       const mainService = services.find(s => s.tipo === 'IDA');
-      setServices(prev => [...prev, {
-        id: crypto.randomUUID(),
-        origen: mainService?.destino || '',
-        destino: mainService?.origen || '',
-        ciudadOrigen: mainService?.ciudadDestino || '',
-        ciudadDestino: mainService?.ciudadOrigen || '',
-        barrioOrigen: mainService?.barrioDestino || '',
-        barrioDestino: mainService?.barrioOrigen || '',
-        fechaHora: null,
-        idaYRegreso: false,
-        conAcompanante: mainService?.conAcompanante || false,
-        telefonoAdicional: mainService?.telefonoAdicional || '',
-        tipo: 'REGRESO',
-        observaciones: ''
-      }]);
+      setServices(prev => {
+        const updated = [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            origen: mainService?.destino || '',
+            destino: mainService?.origen || '',
+            ciudadOrigen: mainService?.ciudadDestino || '',
+            ciudadDestino: mainService?.ciudadOrigen || '',
+            barrioOrigen: mainService?.barrioDestino || '',
+            barrioDestino: mainService?.barrioOrigen || '',
+            fechaHora: null,
+            idaYRegreso: false,
+            conAcompanante: mainService?.conAcompanante || false,
+            telefonoAdicional: mainService?.telefonoAdicional || '',
+            tipo: 'REGRESO',
+            observaciones: ''
+          }
+        ];
+        return syncReturnWithMain(updated);
+      });
     } else {
       setServices(prev => prev.filter(s => s.tipo !== 'REGRESO'));
     }
@@ -200,28 +270,153 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     setServices(prev => prev.filter(s => s.id !== serviceId));
   };
 
+  const handleBulkDateChange = (serviceId: string, date: Date | null) => {
+    setBulkServices(prev => prev.map(service =>
+      service.id === serviceId ? { ...service, fechaHora: date } : service
+    ));
+  };
+
+  const handleBulkCompanionChange = (serviceId: string, hasCompanion: boolean) => {
+    setBulkServices(prev => prev.map(service =>
+      service.id === serviceId ? { ...service, conAcompanante: hasCompanion } : service
+    ));
+  };
+
+  const handleBulkObservationChange = (serviceId: string, observation: string) => {
+    setBulkServices(prev => prev.map(service =>
+      service.id === serviceId ? { ...service, observaciones: observation } : service
+    ));
+  };
+
+  const handleBulkAddressChange = (serviceId: string, field: 'origen' | 'destino', value: string) => {
+    setBulkServices(prev => prev.map(service =>
+      service.id === serviceId ? { ...service, [field]: value } : service
+    ));
+  };
+
+  const toggleBulkAddressEditing = (serviceId: string, field: 'origen' | 'destino') => {
+    setEditingBulkAddresses(prev => ({
+      ...prev,
+      [serviceId]: {
+        ...prev[serviceId],
+        [field]: !prev[serviceId]?.[field]
+      }
+    }));
+  };
+
+  const addBulkRows = () => {
+    const newRows = buildInitialBulkServices().map(service => ({
+      ...service,
+      id: crypto.randomUUID()
+    }));
+    setBulkServices(prev => [...prev, ...newRows]);
+  };
+
+  const removeBulkRow = (serviceId: string) => {
+    setBulkServices(prev => prev.filter(service => service.id !== serviceId));
+  };
+
+  const handleToggleBulkMode = () => {
+    setRequestMode(prev => (prev === 'bulk' ? 'single' : 'bulk'));
+    setWarningMessage(null);
+    setServicesToConfirm([]);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (requestMode === 'bulk') {
+      const bulkMainService = services.find(service => service.tipo === 'IDA');
+      const bulkBaseComplete = Boolean(
+        bulkMainService?.origen &&
+        bulkMainService?.destino &&
+        bulkMainService?.ciudadOrigen &&
+        bulkMainService?.ciudadDestino
+      );
+
+      if (!bulkBaseComplete) {
+        setWarningMessage('Completa los datos de origen y destino antes de programar varios servicios.');
+        setTimeout(() => setWarningMessage(null), 4000);
+        return;
+      }
+
+      const validBulk = bulkServices.filter(service =>
+        service.fechaHora &&
+        service.origen &&
+        service.destino &&
+        service.ciudadOrigen &&
+        service.ciudadDestino
+      );
+
+      if (validBulk.length === 0) {
+        setWarningMessage('Debes programar al menos un servicio con fecha y hora.');
+        setTimeout(() => setWarningMessage(null), 4000);
+        return;
+      }
+
+      if (validBulk.length > authorization.disponible) {
+        setWarningMessage(`Solo puedes programar ${authorization.disponible} servicios con esta autorización.`);
+        setTimeout(() => setWarningMessage(null), 4000);
+        return;
+      }
+
+      setServicesToConfirm(validBulk);
+      setIsConfirmModalOpen(true);
+      return;
+    }
+
     const isValid = services.every(service =>
-      service.origen && service.destino && service.ciudadOrigen && service.ciudadDestino && service.fechaHora
+      service.origen &&
+      service.destino &&
+      service.ciudadOrigen &&
+      service.ciudadDestino &&
+      service.fechaHora
     );
 
     if (!isValid) {
-      setWarningMessage('Por favor complete todos los campos requeridos (*) en todos los servicios.');
+      setWarningMessage('Por favor completa todos los campos requeridos (*) en cada servicio.');
       setTimeout(() => setWarningMessage(null), 4000);
       return;
     }
 
+    setServicesToConfirm(services);
     setIsConfirmModalOpen(true);
   };
 
   const handleConfirmSchedule = () => {
-    onScheduleServices(services);
+    onScheduleServices(servicesToConfirm);
   };
 
-  const isFormSubmittable = hasReadInfo && services.every(service => 
-    service.origen && service.destino && service.ciudadOrigen && service.ciudadDestino && service.fechaHora
+  const mainService = services.find(service => service.tipo === 'IDA');
+  const isBaseComplete = Boolean(
+    mainService?.origen &&
+    mainService?.destino &&
+    mainService?.ciudadOrigen &&
+    mainService?.ciudadDestino
+  );
+
+  const areSingleServicesValid = services.every(service =>
+    service.origen &&
+    service.destino &&
+    service.ciudadOrigen &&
+    service.ciudadDestino &&
+    service.fechaHora
+  );
+
+  const validBulkServices = bulkServices.filter(service =>
+    service.fechaHora &&
+    service.origen &&
+    service.destino &&
+    service.ciudadOrigen &&
+    service.ciudadDestino
+  );
+
+  const canSubmitBulk = isBaseComplete &&
+    validBulkServices.length > 0 &&
+    validBulkServices.length <= authorization.disponible;
+
+  const isFormSubmittable = hasReadInfo && (
+    requestMode === 'bulk' ? canSubmitBulk : areSingleServicesValid
   );
 
   const renderServiceForm = (service: ServiceFormData) => (
@@ -543,8 +738,8 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
           <form onSubmit={handleSubmit} className="space-y-6">
             {services.map(service => renderServiceForm(service))}
 
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-2">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-2">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#01be6a] hover:bg-[#00a85d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01be6a] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -561,11 +756,189 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
                     disabled={!canToggleReturn()}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#01be6a]"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#01be6a]" />
                   <span className="ms-3 text-sm font-medium text-gray-900">Añadir Regreso</span>
                 </label>
               </div>
+
+              <button
+                type="button"
+                onClick={handleToggleBulkMode}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-blue-500 px-4 py-2 text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!isBaseComplete && requestMode !== 'bulk'}
+              >
+                {requestMode === 'bulk' ? (
+                  <>
+                    <X className="h-4 w-4" />
+                    Cerrar solicitud masiva
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Solicitar varios servicios
+                  </>
+                )}
+              </button>
             </div>
+
+            {requestMode === 'bulk' && (
+              <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold text-[#020432]">Solicitud de varios servicios</h3>
+                    <p className="text-sm text-gray-600">Ajusta la fecha y hora de cada traslado programado.</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                    <span>
+                      Programados: <span className="font-semibold text-blue-600">{validBulkServices.length}</span>{' '}
+                      / <span className="font-semibold text-green-600">{authorization.disponible}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={addBulkRows}
+                      className="inline-flex items-center gap-2 rounded-md border border-blue-500 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Agregar 10 más
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-4 text-[11px] font-semibold uppercase tracking-wide text-blue-900 border-b border-blue-200 pb-2">
+                  <div className="col-span-2">Tipo / Fecha y hora</div>
+                  <div className="col-span-1 text-center">Acompañante</div>
+                  <div className="col-span-3">Dirección de origen</div>
+                  <div className="col-span-3">Dirección de destino</div>
+                  <div className="col-span-2">Observaciones</div>
+                  <div className="col-span-1 text-center">Acción</div>
+                </div>
+
+                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                  {bulkServices.map((service, index) => (
+                    <div
+                      key={service.id}
+                      className="grid grid-cols-12 gap-4 items-start py-3 border-b border-blue-100 last:border-b-0"
+                    >
+                      <div className="col-span-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-semibold ${service.tipo === 'REGRESO' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}
+                          >
+                            {service.tipo === 'REGRESO' ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              <MapPin className="h-3.5 w-3.5" />
+                            )}
+                            {service.tipo === 'REGRESO' ? 'Regreso' : 'Ida'}
+                          </span>
+                          <span className="text-[10px] font-medium text-gray-500">#{index + 1}</span>
+                        </div>
+                        <div className="relative">
+                          <DatePicker
+                            selected={service.fechaHora}
+                            onChange={(date: Date | null) => handleBulkDateChange(service.id, date)}
+                            showTimeSelect
+                            timeFormat="HH:mm"
+                            timeIntervals={15}
+                            dateFormat="dd/MM/yyyy, HH:mm"
+                            className="w-full border border-blue-200 rounded-md shadow-sm p-2 pr-10 text-xs focus:ring-blue-400 focus:border-blue-400"
+                            placeholderText="dd/mm/yyyy, --:--"
+                            minDate={getMinDate()}
+                            filterTime={filterTime}
+                            dayClassName={getDayClassName}
+                            locale="es"
+                            timeCaption="Hora"
+                            minTime={setHours(setMinutes(new Date(), 0), 6)}
+                            maxTime={setHours(setMinutes(new Date(), 0), 17)}
+                          />
+                          <Calendar className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-500" />
+                        </div>
+                      </div>
+
+                      <div className="col-span-1 flex justify-center pt-6">
+                        <input
+                          type="checkbox"
+                          checked={service.conAcompanante}
+                          onChange={(e) => handleBulkCompanionChange(service.id, e.target.checked)}
+                          className="h-4 w-4 text-[#01be6a] focus:ring-[#01be6a] border-gray-300 rounded"
+                        />
+                      </div>
+
+                      <div className="col-span-3 space-y-1 pt-2">
+                        {editingBulkAddresses[service.id]?.origen ? (
+                          <input
+                            type="text"
+                            value={service.origen}
+                            onChange={(e) => handleBulkAddressChange(service.id, 'origen', e.target.value)}
+                            onBlur={() => toggleBulkAddressEditing(service.id, 'origen')}
+                            onKeyDown={(e) => e.key === 'Enter' && toggleBulkAddressEditing(service.id, 'origen')}
+                            className="w-full rounded-md border border-blue-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Dirección de origen"
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            onClick={() => toggleBulkAddressEditing(service.id, 'origen')}
+                            className="flex items-center justify-between rounded-md border border-blue-200 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-100 cursor-pointer"
+                          >
+                            <span className="truncate">{service.origen || 'Dirección de origen'}</span>
+                            <Edit3 className="h-3 w-3 text-blue-500" />
+                          </div>
+                        )}
+                        <p className="text-[11px] text-gray-500">{service.ciudadOrigen}</p>
+                      </div>
+
+                      <div className="col-span-3 space-y-1 pt-2">
+                        {editingBulkAddresses[service.id]?.destino ? (
+                          <input
+                            type="text"
+                            value={service.destino}
+                            onChange={(e) => handleBulkAddressChange(service.id, 'destino', e.target.value)}
+                            onBlur={() => toggleBulkAddressEditing(service.id, 'destino')}
+                            onKeyDown={(e) => e.key === 'Enter' && toggleBulkAddressEditing(service.id, 'destino')}
+                            className="w-full rounded-md border border-blue-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Dirección de destino"
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            onClick={() => toggleBulkAddressEditing(service.id, 'destino')}
+                            className="flex items-center justify-between rounded-md border border-blue-200 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-100 cursor-pointer"
+                          >
+                            <span className="truncate">{service.destino || 'Dirección de destino'}</span>
+                            <Edit3 className="h-3 w-3 text-blue-500" />
+                          </div>
+                        )}
+                        <p className="text-[11px] text-gray-500">{service.ciudadDestino}</p>
+                      </div>
+
+                      <div className="col-span-2">
+                        <textarea
+                          value={service.observaciones}
+                          onChange={(e) => handleBulkObservationChange(service.id, e.target.value)}
+                          className="w-full rounded-md border border-blue-200 px-2 py-1 text-xs focus:ring-blue-400 focus:border-blue-400 resize-none"
+                          rows={3}
+                          placeholder="Observaciones específicas..."
+                        />
+                      </div>
+
+                      <div className="col-span-1 flex justify-center pt-4">
+                        {bulkServices.length > 10 && (
+                          <button
+                            type="button"
+                            onClick={() => removeBulkRow(service.id)}
+                            className="text-red-600 hover:text-red-700"
+                            title="Eliminar servicio"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {warningMessage && (
               <p className="mt-2 text-sm text-red-600 font-medium">{warningMessage}</p>
@@ -597,13 +970,20 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
               </div>
             </div>
 
-            <div className="text-center pt-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4">
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(true)}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+              >
+                Cancelar
+              </button>
               <button
                 type="submit"
-                className="w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-[#01be6a] hover:bg-[#00a85d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01be6a] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-[#01be6a] hover:bg-[#00a85d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01be6a] disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!isFormSubmittable}
               >
-                Solicitar Servicios
+                Confirmar Solicitud
               </button>
             </div>
           </form>
@@ -614,7 +994,7 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleConfirmSchedule}
-        services={services}
+        services={servicesToConfirm}
         authorization={authorization}
         userEmail={userInfo.email}
       />
@@ -625,6 +1005,15 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
         services={services}
         authorization={authorization}
         onDeleteService={handleDeleteService}
+      />
+
+      <CancelRequestModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onConfirm={() => {
+          setIsCancelModalOpen(false);
+          onGoBack();
+        }}
       />
     </div>
   );

@@ -14,8 +14,7 @@ interface ListaServiciosViewProps {
   authorizations: Authorization[];
   pastServices: Service[];
   newlyAddedServiceId: string | null;
-  onShowForm: (authorization: Authorization) => void;
-  onShowBulkForm: (authorization: Authorization) => void;
+  onShowForm: (authorization: Authorization, mode?: 'single' | 'bulk') => void;
   onUpdateService: (updatedService: Service) => void;
   onCancelService: (serviceId: string) => void;
   onUpdateUserInfo: (updatedInfo: { email: string; phoneNumber: string; address: string }) => void;
@@ -29,7 +28,6 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
   pastServices,
   newlyAddedServiceId,
   onShowForm: _onShowForm,
-  onShowBulkForm: _onShowBulkForm,
   onUpdateService,
   onCancelService,
   onUpdateUserInfo,
@@ -178,11 +176,11 @@ const ListaServiciosView: React.FC<ListaServiciosViewProps> = ({
 
   // Acciones para abrir los formularios desde la tabla
   const handleRequestSingle = (auth: GroupedAuthorization) => {
-    _onShowForm(auth);
+    _onShowForm(auth, 'single');
   };
 
   const handleRequestBulk = (auth: GroupedAuthorization) => {
-    _onShowBulkForm(auth);
+    _onShowForm(auth, 'bulk');
   };
 
   const clearFilters = () => {

@@ -6,7 +6,6 @@ import CorporateHomeView from './components/CorporateHomeView';
 import HomeSelector from './components/HomeSelector';
 import ListaServiciosView from './components/ListaServiciosView';
 import SolicitudTransporteView from './components/SolicitudTransporteView';
-import BulkServiceRequestView from './components/BulkServiceRequestView';
 import CoordinatorPanel from './components/CoordinatorPanel';
 import { Authorization, Service, ServiceFormData } from './types';
 import { 
@@ -16,13 +15,15 @@ import {
   mockPastServices 
 } from './data/mockData';
 
-type AppView = 'home' | 'user-list' | 'user-form' | 'user-bulk-form' | 'coordinator';
+type AppView = 'home' | 'user-list' | 'user-form' | 'coordinator';
+type RequestMode = 'single' | 'bulk';
 type HomeType = 'original' | 'alternative' | 'corporate';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('home');
   const [currentHome, setCurrentHome] = useState<HomeType>('corporate');
   const [selectedAuthorization, setSelectedAuthorization] = useState<Authorization | null>(null);
+  const [requestMode, setRequestMode] = useState<RequestMode>('single');
   // Shared services state between user and coordinator
   const [sharedServices, setSharedServices] = useState<Service[]>(mockPastServices);
   const [newlyAddedServiceId, setNewlyAddedServiceId] = useState<string | null>(null);
@@ -41,14 +42,10 @@ function App() {
     setSelectedAuthorization(null);
   };
 
-  const handleShowForm = (authorization: Authorization) => {
+  const handleShowForm = (authorization: Authorization, mode: RequestMode = 'single') => {
     setSelectedAuthorization(authorization);
+    setRequestMode(mode);
     setCurrentView('user-form');
-  };
-
-  const handleShowBulkForm = (authorization: Authorization) => {
-    setSelectedAuthorization(authorization);
-    setCurrentView('user-bulk-form');
   };
 
   const handleGoBackToList = () => {
@@ -190,7 +187,6 @@ function App() {
           pastServices={sharedServices}
           newlyAddedServiceId={newlyAddedServiceId}
           onShowForm={handleShowForm}
-          onShowBulkForm={handleShowBulkForm}
           onUpdateService={handleUpdateService}
           onCancelService={handleCancelService}
           onUpdateUserInfo={handleUpdateUserInfo}
@@ -207,18 +203,7 @@ function App() {
           onScheduleServices={handleScheduleServices}
           onUpdateUserInfo={handleUpdateUserInfo}
           onLogout={handleLogout}
-        />
-      )}
-
-      {currentView === 'user-bulk-form' && selectedAuthorization && (
-        <BulkServiceRequestView
-          userInfo={userInfo}
-          patientInfo={mockPatientInfo}
-          authorization={selectedAuthorization}
-          onGoBack={handleGoBackToList}
-          onScheduleServices={handleScheduleServices}
-          onUpdateUserInfo={handleUpdateUserInfo}
-          onLogout={handleLogout}
+          initialMode={requestMode}
         />
       )}
       
