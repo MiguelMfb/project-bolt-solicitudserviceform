@@ -236,7 +236,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                             </div>
                           </div>
                           <div>
-                            <span className="text-blue-700">Tarifa:</span>
+                            <span className="text-blue-700">Tarifa asignada:</span>
                             <p className="font-medium text-blue-900">{authorization.tarifaUT}</p>
                           </div>
                           <div>
