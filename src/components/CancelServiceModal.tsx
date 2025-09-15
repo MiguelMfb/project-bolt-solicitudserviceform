@@ -116,7 +116,7 @@ const CancelServiceModal: React.FC<CancelServiceModalProps> = ({
                               <p className="text-gray-900">{service.volante}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600 font-medium">Tarifa:</p>
+                              <p className="text-gray-600 font-medium">Tarifa asignada:</p>
                               <p className="text-gray-900">{service.tarifaUT}</p>
                             </div>
                           </div>

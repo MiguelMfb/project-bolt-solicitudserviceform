@@ -498,7 +498,7 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
 
             <div>
               <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-1">
-                Tarifa UT:
+                Tarifa asignada:
               </label>
               <p className="text-sm text-gray-900 font-medium">
                 {authorization.tarifaUT || '-'}

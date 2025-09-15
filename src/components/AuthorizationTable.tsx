@@ -38,7 +38,7 @@ const AuthorizationTable: React.FC<AuthorizationTableProps> = ({ authorizations,
       <table className="min-w-[1100px] md:min-w-full divide-y divide-gray-200 table-auto">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tarifa / Código Único</th>
+            <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tarifa asignada / Código Único</th>
             <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Número de Volante</th>
             <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Vigencia</th>
             <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Servicios</th>
