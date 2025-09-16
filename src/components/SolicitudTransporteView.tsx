@@ -93,29 +93,72 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     return 'react-datepicker__day--enabled';
   };
 
-  const syncReturnWithMain = (list: ServiceFormData[]) => {
-    const mainService = list.find(service => service.tipo === 'IDA');
-    const returnService = list.find(service => service.tipo === 'REGRESO');
+  const findRelatedReturn = (list: ServiceFormData[], baseId?: string) => {
+    if (!baseId) {
+      return list.find(service => service.tipo === 'REGRESO');
+    }
 
-    if (!mainService || !returnService) {
+    const fallbackBaseId = list.find(service => service.tipo !== 'REGRESO')?.id;
+
+    return list.find(service =>
+      service.tipo === 'REGRESO' &&
+      (service.relatedServiceId
+        ? service.relatedServiceId === baseId
+        : fallbackBaseId === baseId)
+    );
+  };
+
+  const createReturnServiceFrom = (service: ServiceFormData): ServiceFormData => ({
+    id: crypto.randomUUID(),
+    origen: service.destino || '',
+    destino: service.origen || '',
+    ciudadOrigen: service.ciudadDestino || '',
+    ciudadDestino: service.ciudadOrigen || '',
+    barrioOrigen: service.barrioDestino || '',
+    barrioDestino: service.barrioOrigen || '',
+    fechaHora: null,
+    idaYRegreso: false,
+    conAcompanante: service.conAcompanante || false,
+    telefonoAdicional: service.telefonoAdicional || '',
+    tipo: 'REGRESO',
+    observaciones: '',
+    relatedServiceId: service.id
+  });
+
+  const syncReturnWithMain = (list: ServiceFormData[]) => {
+    const baseServices = list.filter(service => service.tipo !== 'REGRESO');
+    if (baseServices.length === 0) {
       return list;
     }
 
-    return list.map(service =>
-      service.id === returnService.id
-        ? {
-            ...service,
-            origen: mainService.destino || '',
-            destino: mainService.origen || '',
-            ciudadOrigen: mainService.ciudadDestino || '',
-            ciudadDestino: mainService.ciudadOrigen || '',
-            barrioOrigen: mainService.barrioDestino || '',
-            barrioDestino: mainService.barrioOrigen || '',
-            conAcompanante: mainService.conAcompanante,
-            telefonoAdicional: mainService.telefonoAdicional,
-          }
-        : service
-    );
+    const baseMap = new Map(baseServices.map(service => [service.id, service]));
+    const fallbackBaseId = baseServices[0]?.id;
+
+    return list.map(service => {
+      if (service.tipo === 'REGRESO') {
+        const relatedId = service.relatedServiceId || fallbackBaseId;
+        const base = relatedId ? baseMap.get(relatedId) : undefined;
+
+        if (!base) {
+          return service;
+        }
+
+        return {
+          ...service,
+          relatedServiceId: relatedId,
+          origen: base.destino || '',
+          destino: base.origen || '',
+          ciudadOrigen: base.ciudadDestino || '',
+          ciudadDestino: base.ciudadOrigen || '',
+          barrioOrigen: base.barrioDestino || '',
+          barrioDestino: base.barrioOrigen || '',
+          conAcompanante: base.conAcompanante || false,
+          telefonoAdicional: base.telefonoAdicional || '',
+        };
+      }
+
+      return service;
+    });
   };
 
   const createBulkService = (template?: ServiceFormData, tipo: 'IDA' | 'REGRESO' = 'IDA'): ServiceFormData => ({
@@ -136,13 +179,13 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
 
   const buildInitialBulkServices = () => {
     const mainService = services.find(service => service.tipo === 'IDA') || services[0];
-    const returnService = services.find(service => service.tipo === 'REGRESO');
+    const returnService = findRelatedReturn(services, mainService?.id);
 
     if (!mainService) {
       return Array.from({ length: 10 }, () => createBulkService());
     }
 
-    const alternateWithReturn = hasReturnService && !!returnService;
+    const alternateWithReturn = Boolean(returnService);
 
     return Array.from({ length: 10 }, (_, index) => {
       if (alternateWithReturn) {
@@ -188,6 +231,13 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     }
   }, [requestMode, hasReturnService]);
 
+  useEffect(() => {
+    const mainService = services.find(service => service.tipo === 'IDA') || services[0];
+    const hasMainReturn = Boolean(findRelatedReturn(services, mainService?.id));
+
+    setHasReturnService(prev => (prev === hasMainReturn ? prev : hasMainReturn));
+  }, [services]);
+
   const handleServiceChange = (serviceId: string, field: keyof ServiceFormData, value: any) => {
     setServices(prev => {
       const updated = prev.map(service =>
@@ -203,71 +253,144 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
   };
 
   const handleToggleReturn = (enabled: boolean) => {
-    if (!canToggleReturn()) return;
-
-    if (enabled && services.length + 1 > authorization.disponible) {
-      setIsLimitModalOpen(true);
+    if (enabled && !canToggleReturn()) {
+      setWarningMessage('Completa los datos de origen y destino antes de añadir un regreso.');
+      setTimeout(() => setWarningMessage(null), 4000);
       return;
     }
 
-    setHasReturnService(enabled);
-    if (enabled) {
-      const mainService = services.find(s => s.tipo === 'IDA');
-      setServices(prev => {
-        const updated = [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            origen: mainService?.destino || '',
-            destino: mainService?.origen || '',
-            ciudadOrigen: mainService?.ciudadDestino || '',
-            ciudadDestino: mainService?.ciudadOrigen || '',
-            barrioOrigen: mainService?.barrioDestino || '',
-            barrioDestino: mainService?.barrioOrigen || '',
-            fechaHora: null,
-            idaYRegreso: false,
-            conAcompanante: mainService?.conAcompanante || false,
-            telefonoAdicional: mainService?.telefonoAdicional || '',
-            tipo: 'REGRESO',
-            observaciones: ''
+    let limitReached = false;
+
+    setServices(prev => {
+      const mainService = prev.find(service => service.tipo === 'IDA') || prev[0];
+      if (!mainService) {
+        return prev;
+      }
+
+      const existingReturn = findRelatedReturn(prev, mainService.id);
+
+      if (enabled) {
+        if (existingReturn) {
+          return syncReturnWithMain(prev);
+        }
+
+        if (prev.length + 1 > authorization.disponible) {
+          limitReached = true;
+          return prev;
+        }
+
+        const newReturn = createReturnServiceFrom(mainService);
+        const updated: ServiceFormData[] = [];
+
+        prev.forEach(service => {
+          updated.push(service);
+          if (service.id === mainService.id) {
+            updated.push(newReturn);
           }
-        ];
+        });
+
         return syncReturnWithMain(updated);
+      }
+
+      return prev.filter(service => {
+        if (service.tipo !== 'REGRESO') {
+          return true;
+        }
+
+        const relatedId = service.relatedServiceId || mainService.id;
+        return relatedId !== mainService.id;
       });
-    } else {
-      setServices(prev => prev.filter(s => s.tipo !== 'REGRESO'));
+    });
+
+    if (limitReached) {
+      setIsLimitModalOpen(true);
     }
   };
 
-  const handleAddService = () => {
-    if (services.length + 1 > authorization.disponible) {
+  const handleAddReturnForAllServices = () => {
+    let feedback: string | null = null;
+    let limitReached = false;
+
+    setServices(prev => {
+      const baseServices = prev.filter(service => service.tipo !== 'REGRESO');
+
+      if (baseServices.length === 0) {
+        feedback = 'Debes registrar al menos un servicio antes de añadir regresos.';
+        return prev;
+      }
+
+      const fallbackBaseId = baseServices[0]?.id;
+      const returnByBase = new Map<string, ServiceFormData>();
+      prev.forEach(service => {
+        if (service.tipo === 'REGRESO') {
+          const relatedId = service.relatedServiceId || fallbackBaseId;
+          if (relatedId) {
+            returnByBase.set(relatedId, service);
+          }
+        }
+      });
+
+      const servicesNeedingReturn = baseServices.filter(service => !returnByBase.has(service.id));
+
+      if (servicesNeedingReturn.length === 0) {
+        feedback = 'Todos los servicios ya cuentan con un regreso.';
+        return syncReturnWithMain(prev);
+      }
+
+      const hasIncompleteService = servicesNeedingReturn.some(service =>
+        !(service.origen && service.destino && service.ciudadOrigen && service.ciudadDestino)
+      );
+
+      if (hasIncompleteService) {
+        feedback = 'Completa los datos de origen y destino en cada servicio antes de añadir regresos.';
+        return prev;
+      }
+
+      if (prev.length + servicesNeedingReturn.length > authorization.disponible) {
+        limitReached = true;
+        return prev;
+      }
+
+      const newReturns = servicesNeedingReturn.map(createReturnServiceFrom);
+      const newReturnMap = new Map(newReturns.map(service => [service.relatedServiceId as string, service]));
+
+      const updated: ServiceFormData[] = [];
+
+      prev.forEach(service => {
+        if (service.tipo === 'REGRESO') {
+          return;
+        }
+
+        updated.push(service);
+
+        const existingReturn = returnByBase.get(service.id);
+        if (existingReturn) {
+          updated.push(existingReturn);
+          return;
+        }
+
+        const createdReturn = newReturnMap.get(service.id);
+        if (createdReturn) {
+          updated.push(createdReturn);
+        }
+      });
+
+      return syncReturnWithMain(updated);
+    });
+
+    if (limitReached) {
       setIsLimitModalOpen(true);
       return;
     }
 
-    setServices(prev => [...prev, {
-      id: crypto.randomUUID(),
-      origen: '',
-      destino: '',
-      ciudadOrigen: '',
-      ciudadDestino: '',
-      barrioOrigen: '',
-      barrioDestino: '',
-      fechaHora: null,
-      idaYRegreso: false,
-      conAcompanante: false,
-      telefonoAdicional: '',
-      tipo: 'ADICIONAL',
-      observaciones: ''
-    }]);
+    if (feedback) {
+      setWarningMessage(feedback);
+      setTimeout(() => setWarningMessage(null), 4000);
+    }
   };
 
   const handleDeleteService = (serviceId: string) => {
-    const serviceToDelete = services.find(s => s.id === serviceId);
-    if (serviceToDelete?.tipo === 'REGRESO') {
-      setHasReturnService(false);
-    }
-    setServices(prev => prev.filter(s => s.id !== serviceId));
+    setServices(prev => prev.filter(service => service.id !== serviceId && service.relatedServiceId !== serviceId));
   };
 
   const handleBulkDateChange = (serviceId: string, date: Date | null) => {
@@ -387,7 +510,10 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     onScheduleServices(servicesToConfirm);
   };
 
-  const mainService = services.find(service => service.tipo === 'IDA');
+  const baseServices = services.filter(service => service.tipo !== 'REGRESO');
+  const mainService = baseServices.find(service => service.tipo === 'IDA') || baseServices[0];
+  const servicesWithoutReturn = baseServices.filter(service => !findRelatedReturn(services, service.id));
+  const canAddReturnsToAll = servicesWithoutReturn.length > 0;
   const isBaseComplete = Boolean(
     mainService?.origen &&
     mainService?.destino &&
@@ -742,10 +868,11 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#01be6a] hover:bg-[#00a85d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01be6a] disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleAddService}
+                  onClick={handleAddReturnForAllServices}
+                  className="inline-flex items-center px-4 py-2 rounded-md border border-[#01be6a] text-sm font-medium text-[#01be6a] bg-white hover:bg-[#e6f7ef] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01be6a] disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!canAddReturnsToAll}
                 >
-                  + Añadir más servicios
+                  Añadir regreso a cada servicio individual
                 </button>
 
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -753,7 +880,7 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
                     type="checkbox"
                     checked={hasReturnService}
                     onChange={(e) => handleToggleReturn(e.target.checked)}
-                    disabled={!canToggleReturn()}
+                    disabled={!canToggleReturn() && !hasReturnService}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#01be6a]" />

@@ -79,6 +79,7 @@ export interface ServiceFormData {
   telefonoAdicional?: string;
   tipo?: 'IDA' | 'REGRESO' | 'ADICIONAL';
   observaciones?: string;
+  relatedServiceId?: string;
 }
 
 export interface Driver {
