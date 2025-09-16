@@ -7,6 +7,7 @@ import { addDays, setHours, setMinutes, startOfDay } from 'date-fns';
 import { ServiceFormData, Authorization } from '../types';
 import AddressSelector from './AddressSelector';
 import { UserInfo } from '../types';
+import generateUUID from '../utils/generateUUID';
 
 interface CreateServiceModalProps {
   isOpen: boolean;
@@ -92,7 +93,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
   const [selectedAuthorization, setSelectedAuthorization] = useState<Authorization | null>(null);
   
   const [service, setService] = useState<ServiceFormData>({
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     origen: '',
     destino: '',
     ciudadOrigen: '',
@@ -197,7 +198,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
     setSearchError('');
     setIsConfirmed(false);
     setService({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       origen: '',
       destino: '',
       ciudadOrigen: '',
