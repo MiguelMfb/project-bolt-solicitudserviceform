@@ -11,6 +11,7 @@ import ConfirmationModal from './ConfirmationModal';
 import AddressSelector from './AddressSelector';
 import LimitModal from './LimitModal';
 import CancelRequestModal from './CancelRequestModal';
+import generateUUID from '../utils/generateUUID';
 
 // Register Spanish locale
 registerLocale('es', es);
@@ -41,7 +42,7 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
     ? (authorization as any).volantes
     : [authorization.volante];
   const [services, setServices] = useState<ServiceFormData[]>([{
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     origen: '',
     destino: '',
     ciudadOrigen: '',
@@ -109,7 +110,7 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
   };
 
   const createReturnServiceFrom = (service: ServiceFormData): ServiceFormData => ({
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     origen: service.destino || '',
     destino: service.origen || '',
     ciudadOrigen: service.ciudadDestino || '',
@@ -162,7 +163,7 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
   };
 
   const createBulkService = (template?: ServiceFormData, tipo: 'IDA' | 'REGRESO' = 'IDA'): ServiceFormData => ({
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     origen: template?.origen || '',
     destino: template?.destino || '',
     ciudadOrigen: template?.ciudadOrigen || '',
@@ -198,8 +199,8 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
   };
 
   useEffect(() => {
-    setServices([{
-      id: crypto.randomUUID(),
+    setServices([{ 
+      id: generateUUID(),
       origen: '',
       destino: '',
       ciudadOrigen: '',
@@ -430,7 +431,7 @@ const SolicitudTransporteView: React.FC<SolicitudTransporteViewProps> = ({
   const addBulkRows = () => {
     const newRows = buildInitialBulkServices().map(service => ({
       ...service,
-      id: crypto.randomUUID()
+      id: generateUUID()
     }));
     setBulkServices(prev => [...prev, ...newRows]);
   };

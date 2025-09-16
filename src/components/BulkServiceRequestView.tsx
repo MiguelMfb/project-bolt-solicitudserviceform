@@ -9,6 +9,7 @@ import UserDropdown from './UserDropdown';
 import PatientInfoBlock from './PatientInfoBlock';
 import ConfirmationModal from './ConfirmationModal';
 import AddressSelector from './AddressSelector';
+import generateUUID from '../utils/generateUUID';
 
 // Register Spanish locale
 registerLocale('es', es);
@@ -85,7 +86,7 @@ const BulkServiceRequestView: React.FC<BulkServiceRequestViewProps> = ({
   // Initialize with 10 empty service slots
   useEffect(() => {
     const initialServices = Array.from({ length: 10 }, (_, index) => ({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       origen: '',
       destino: '',
       ciudadOrigen: '',
@@ -158,7 +159,7 @@ const BulkServiceRequestView: React.FC<BulkServiceRequestViewProps> = ({
 
   const addMoreServices = () => {
     const newServices = Array.from({ length: 10 }, () => ({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       origen: commonParams.origen,
       destino: commonParams.destino,
       ciudadOrigen: commonParams.ciudadOrigen,
